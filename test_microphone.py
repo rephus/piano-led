@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import RPi.GPIO as GPIO
 import time
+from signal import pause
 
 #GPIO SETUP
 sound = 17
@@ -20,4 +21,6 @@ GPIO.add_event_callback(sound, callback)  # assign function to GPIO PIN, Run fun
 
 # infinite loop
 while True:
-        time.sleep(1)
+    print("Wait for sound...")
+    pause()
+    

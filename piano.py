@@ -1,8 +1,17 @@
+#!/usr/bin/python
 
 import time
 from rpi_ws281x import PixelStrip, Color
 import argparse
 from mido import MidiFile
+
+import RPi.GPIO as GPIO
+import time
+
+#GPIO SETUP
+microphone = 17
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(microphone, GPIO.IN)
 
 # LED strip configuration:
 LED_COUNT = 21        # Number of LED pixels.
@@ -55,27 +64,26 @@ def play_song():
         else:
             print("skipping", msg)
 
-
-def wait_for_key_press(): 
-    # detect any sound 
-    
-    pass
-
-
-
 def play_song_with_keys(): 
+    # This mode is supposed to play the song and wait for a key press to play the next note
+    # It is a cool concept, but it is not working as expected
+    # Because the microphone is not reliable to detect the key press
+    # This could be achieve only with a MIDI input device
     track = mid.tracks[1]
     note_on = False
     for msg in track:
+        print(msg)
         if msg.type == 'note_on':
             note = msg.note - 66
             strip.setPixelColor(note, Color(255, 0, 0))
             strip.show()
             note_on=True
         elif msg.type == 'note_off' and note_on:
-            wait_for_key_press()
+            GPIO.wait_for_edge(microphone, GPIO.FALLING, timeout=3000) # detect any sound 
+
             strip.setPixelColor(note, Color(0, 0, 0))
             strip.show()
+            time.sleep(0.1)
             note_on=False
         else:
             print("skipping", msg)
@@ -103,7 +111,7 @@ if __name__ == '__main__':
         colorWipe(strip, Color(0, 0, 0), 10)
         
         play_song() 
-
+        #play_song_with_keys()
 
     except KeyboardInterrupt:
         if args.clear:
