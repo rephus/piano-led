@@ -4,14 +4,12 @@ import time
 from rpi_ws281x import PixelStrip, Color
 import argparse
 from mido import MidiFile
-
 import RPi.GPIO as GPIO
-import time
 
 #GPIO SETUP
 microphone = 17
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(microphone, GPIO.IN)
+#GPIO.setmode(GPIO.BCM)
+#GPIO.setup(microphone, GPIO.IN)
 
 # LED strip configuration:
 LED_COUNT = 21        # Number of LED pixels.
@@ -22,6 +20,11 @@ LED_DMA = 10          # DMA channel to use for generating signal (try 10)
 LED_BRIGHTNESS = 255  # Set to 0 for darkest and 255 for brightest
 LED_INVERT = False    # True to invert the signal (when using NPN transistor level shift)
 LED_CHANNEL = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
+
+
+FIRST_NOTE_LED = 66 # the first note that will be played on the LED
+SONG_SPEED = 0.5 # speed of the song to play 
+TIME_GAP = 0.1 # time between notes
 
 mid = MidiFile('keyboardcat.mid', clip=True)
 #import pdb; pdb.set_trace()
@@ -39,28 +42,52 @@ def colorWipe(strip, color, wait_ms=50):
         strip.show()
         time.sleep(wait_ms / 1000.0)
 
-def calculate_led_note(midi_note):
+def wheel(pos):
+    """Generate rainbow colors across 0-255 positions."""
+    if pos < 85:
+        return Color(pos * 3, 255 - pos * 3, 0)
+    elif pos < 170:
+        pos -= 85
+        return Color(255 - pos * 3, 0, pos * 3)
+    else:
+        pos -= 170
+        return Color(0, pos * 3, 255 - pos * 3)
+    
+
+def rainbow(strip, wait_seconds=1):
+    """Draw rainbow that uniformly distributes itself across all pixels."""
+    for i in range(strip.numPixels()):
+        strip.setPixelColor(i, wheel(
+            (int(i * 256 / strip.numPixels()) ) & 255))
+    strip.show()
+    time.sleep(wait_seconds)
+
+def calculate_led_position(midi_note):
+    # LEDs can have a different density that will not match the piano keys
+    # we should conver the midi_note into the LED position
     pass
 
-
+def calculate_led_color(midi_note):
+    # Each note should have a different LED color
+    # based on the rainbow distribution (from red (C) to violet (B))
+    pass
 
 def play_song(): 
     track = mid.tracks[1]
     for msg in track:
-        #print(msg)
-        speed = 0.5
-        gap = 0.1
+        print(msg)
+
         if msg.time > 0 : 
-            time.sleep((msg.time - gap / speed) / 1000)
+            time.sleep(((msg.time - TIME_GAP) / SONG_SPEED) / 1000)
         if msg.type == 'note_on':
-            note = msg.note - 66
+            note = msg.note - FIRST_NOTE_LED
             strip.setPixelColor(note, Color(255, 0, 0))
             strip.show()
         elif msg.type == 'note_off':
-            note = msg.note - 66
+            note = msg.note - FIRST_NOTE_LED
             strip.setPixelColor(note, Color(0, 0, 0))
             strip.show()
-            time.sleep(gap) 
+            time.sleep(TIME_GAP) # add a little gap on note off, we want it to blink in case the next note is the same.
         else:
             print("skipping", msg)
 
@@ -74,7 +101,7 @@ def play_song_with_keys():
     for msg in track:
         print(msg)
         if msg.type == 'note_on':
-            note = msg.note - 66
+            note = msg.note - FIRST_NOTE_LED
             strip.setPixelColor(note, Color(255, 0, 0))
             strip.show()
             note_on=True
@@ -107,9 +134,10 @@ if __name__ == '__main__':
 
     try:
         print('Starting strip.')
-        colorWipe(strip, Color(255, 0, 0), 10)  # Red wipe
+        #colorWipe(strip, Color(255, 0, 0), 10)  # Red wipe
+        rainbow(strip)
         colorWipe(strip, Color(0, 0, 0), 10)
-        
+
         play_song() 
         #play_song_with_keys()
 
