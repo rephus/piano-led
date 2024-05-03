@@ -12,7 +12,7 @@ microphone = 17
 #GPIO.setup(microphone, GPIO.IN)
 
 # LED strip configuration:
-LED_COUNT = 21        # Number of LED pixels.
+LED_COUNT = 160        # Number of LED pixels.
 LED_PIN = 18          # GPIO pin connected to the pixels (18 uses PWM!).
 # LED_PIN = 10        # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
 LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
@@ -22,12 +22,22 @@ LED_INVERT = False    # True to invert the signal (when using NPN transistor lev
 LED_CHANNEL = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
 
 
-FIRST_NOTE_LED = 66 # the first note that will be played on the LED
-SONG_SPEED = 0.5 # speed of the song to play 
+FIRST_NOTE_LED = 20 # the first note that will be played on the LED
+SONG_SPEED = 0.3 # speed of the song to play 
 TIME_GAP = 0.1 # time between notes
 
-mid = MidiFile('keyboardcat.mid', clip=True)
+#mid = MidiFile('keyboardcat.mid', clip=True)
+#mid = MidiFile('songs/aeris.mid', clip=True)
 #import pdb; pdb.set_trace()
+#mid = MidiFile('songs/at_zanarkand.mid', clip=True)
+#mid = MidiFile('songs/invention1bach60ppm.mid', clip=True)
+#mid = MidiFile('songs/himno de la alegria.mid', clip=True)
+#mid = MidiFile('songs/greengreens.mid', clip=True)
+#mid = MidiFile('songs/darkwrld.mid', clip=True)
+#mid = MidiFile('songs/hyrulecastle.mid', clip=True)
+#mid = MidiFile('songs/brinstar.mid', clip=True)
+mid = MidiFile('songs/supermario.mid', clip=True)
+
 
 # TODO track0 is always metadata ?
 print("tracks" , (mid.tracks[0]).__dict__)
@@ -65,12 +75,87 @@ def rainbow(strip, wait_seconds=1):
 def calculate_led_position(midi_note):
     # LEDs can have a different density that will not match the piano keys
     # we should conver the midi_note into the LED position
-    pass
+
+    # Mapping for a 160 LED strip
+    match midi_note:
+
+        case 60: return 27 # do
+        case 61: return 27 +2  # do # 
+        case 62: return 27 +4 # re 
+        case 63: return 27 +6 # re # 
+        case 64: return 27 +8 # mi 
+        case 65: return 27 +11 # fa 
+        case 66: return 27 +13 # fa #
+        case 67: return 27 +15 # sol
+        case 68: return 27 +17 # sol #
+        case 69: return 27 +19 # la
+        case 70: return 27 +21 # la # 
+        case 71: return 27 +23 # si 
+
+        # octava central
+        case 72: return 52 # do
+        case 73: return 52 + 3 # do # 
+        case 74: return 52 + 5 # re 
+        case 75: return 52 + 7 # re # 
+        case 76: return 52 + 9 # mi 
+        case 77: return 52 + 12 # fa 
+        case 78: return 52 + 14 # fa #
+        case 79: return 52 + 16 # sol
+        case 80: return 52 + 18 # sol #
+        case 81: return 52 + 20 # la
+        case 82: return 52 + 22 # la # 
+        case 83: return 52 + 24 # si 
+
+
+        case 84: return 79 # do
+        case 85: return 79 +2  # do # 
+        case 86: return 79 + 4 # re 
+        case 87: return 79 + 6 # re # 
+        case 88: return 79 + 8 # mi 
+        case 89: return 79 + 11 # fa 
+        case 90: return 79 + 13 # fa #
+        case 91: return 79 + 15 # sol
+        case 92: return 79 + 17 # sol #
+        case 93: return 79 + 19 # la
+        case 94: return 79 + 21 # la # 
+        case 95: return 79 + 23 # si 
+
+        case _: 
+            return 1
 
 def calculate_led_color(midi_note):
+
     # Each note should have a different LED color
     # based on the rainbow distribution (from red (C) to violet (B))
-    pass
+    match midi_note:
+
+        case 60: return Color(255, 0, 0) # do
+        case 61: return  Color(255, 0, 0) # do #
+        case 62: return Color(254, 153, 0) # re 
+        case 63: return Color(254, 153, 0) # re # 
+        case 64: return Color(255, 222, 89) # mi  
+        case 65: return Color(125,128,88) # fa 
+        case 66: return Color(125,128,88) # fa #
+        case 67: return Color(94,131,232) # sol
+        case 68: return Color(94,131,232)  # sol #
+        case 69: return Color(204,108,231)  # la
+        case 70: return Color(204,108,231) # la # 
+        case 71: return Color(239, 45,139) # si 
+        # octava central
+        case 72: return Color(255, 0, 0) # do
+        case 73: return Color(255, 0, 0) # do #
+        case 74: return Color(254, 153, 0) # re 
+        case 75: return Color(254, 153, 0) # re # 
+        case 76: return Color(255, 222, 89) # mi 
+        case 77: return Color(125,128,88) # fa 
+        case 78: return Color(125,128,88) # fa #
+        case 79: return  Color(94,131,232) # sol
+        case 80: return Color(94,131,232)  # sol #
+        case 81: return Color(204,108,231)  # la
+        case 82: return Color(204,108,231) # la # 
+        case 83: return Color(239, 45,139) # si 
+        case _: 
+            return Color(255, 0,0)
 
 def play_song(): 
     track = mid.tracks[1]
@@ -79,12 +164,14 @@ def play_song():
 
         if msg.time > 0 : 
             time.sleep(((msg.time - TIME_GAP) / SONG_SPEED) / 1000)
-        if msg.type == 'note_on':
-            note = msg.note - FIRST_NOTE_LED
-            strip.setPixelColor(note, Color(255, 0, 0))
+        if msg.type == 'note_on' and msg.velocity > 0:
+            note = calculate_led_position(msg.note) #- FIRST_NOTE_LED
+            color = calculate_led_color(msg.note)
+
+            strip.setPixelColor(note, color)
             strip.show()
-        elif msg.type == 'note_off':
-            note = msg.note - FIRST_NOTE_LED
+        elif msg.type == 'note_off'  or (msg.type == 'note_on' and msg.velocity == 0):
+            note = calculate_led_position(msg.note)# - FIRST_NOTE_LED
             strip.setPixelColor(note, Color(0, 0, 0))
             strip.show()
             time.sleep(TIME_GAP) # add a little gap on note off, we want it to blink in case the next note is the same.
@@ -135,7 +222,7 @@ if __name__ == '__main__':
     try:
         print('Starting strip.')
         #colorWipe(strip, Color(255, 0, 0), 10)  # Red wipe
-        rainbow(strip)
+        #rainbow(strip)
         colorWipe(strip, Color(0, 0, 0), 10)
 
         play_song() 
