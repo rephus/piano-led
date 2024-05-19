@@ -10,6 +10,9 @@ import RPi.GPIO as GPIO
 microphone = 17
 #GPIO.setmode(GPIO.BCM)
 #GPIO.setup(microphone, GPIO.IN)
+pause = False 
+stop = False 
+back = False 
 
 # LED strip configuration:
 LED_COUNT = 160        # Number of LED pixels.
@@ -23,8 +26,8 @@ LED_CHANNEL = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
 
 
 FIRST_NOTE_LED = 20 # the first note that will be played on the LED
-SONG_SPEED = 0.3 # speed of the song to play 
-TIME_GAP = 0.1 # time between notes
+song_speed = 1 # speed of the song to play 
+TIME_GAP = 0 # time between notes
 
 #mid = MidiFile('keyboardcat.mid', clip=True)
 #mid = MidiFile('songs/aeris.mid', clip=True)
@@ -36,11 +39,14 @@ TIME_GAP = 0.1 # time between notes
 #mid = MidiFile('songs/darkwrld.mid', clip=True)
 #mid = MidiFile('songs/hyrulecastle.mid', clip=True)
 #mid = MidiFile('songs/brinstar.mid', clip=True)
-mid = MidiFile('songs/supermario.mid', clip=True)
+#mid = MidiFile('songs/supermario.mid', clip=True)
 
 
 # TODO track0 is always metadata ?
-print("tracks" , (mid.tracks[0]).__dict__)
+ 
+strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
+# Intialize the library (must be called once before other functions).
+strip.begin()
 
 
 #print(mid)
@@ -72,133 +78,141 @@ def rainbow(strip, wait_seconds=1):
     strip.show()
     time.sleep(wait_seconds)
 
-def calculate_led_position(midi_note):
-    # LEDs can have a different density that will not match the piano keys
-    # we should conver the midi_note into the LED position
-
-    # Mapping for a 160 LED strip
-    match midi_note:
-
-        case 60: return 27 # do
-        case 61: return 27 +2  # do # 
-        case 62: return 27 +4 # re 
-        case 63: return 27 +6 # re # 
-        case 64: return 27 +8 # mi 
-        case 65: return 27 +11 # fa 
-        case 66: return 27 +13 # fa #
-        case 67: return 27 +15 # sol
-        case 68: return 27 +17 # sol #
-        case 69: return 27 +19 # la
-        case 70: return 27 +21 # la # 
-        case 71: return 27 +23 # si 
-
-        # octava central
-        case 72: return 52 # do
-        case 73: return 52 + 3 # do # 
-        case 74: return 52 + 5 # re 
-        case 75: return 52 + 7 # re # 
-        case 76: return 52 + 9 # mi 
-        case 77: return 52 + 12 # fa 
-        case 78: return 52 + 14 # fa #
-        case 79: return 52 + 16 # sol
-        case 80: return 52 + 18 # sol #
-        case 81: return 52 + 20 # la
-        case 82: return 52 + 22 # la # 
-        case 83: return 52 + 24 # si 
+def midi_to_led_position(midi_note):
+    # Base positions for C notes in different octaves
+    base_positions = {48: 1, 60: 27, 72: 53, 84: 79, 96: 105, 108: 132 }
+    # Offset positions within an octave
+    offsets = [0, 2, 4, 6, 8, 11, 13, 15, 17, 19, 21, 23]
+    
+    # Calculate the base position for the given note
+    octave = (midi_note // 12) * 12
+    if octave in base_positions:
+        base_position = base_positions[octave]
+    else:
+        # Calculate the base position if it's not explicitly given
+        base_position = base_positions[60] + (octave - 60) // 12 * 25
+    
+    # Calculate the position within the octave
+    note_in_octave = midi_note % 12
+    
+    return base_position + offsets[note_in_octave]
 
 
-        case 84: return 79 # do
-        case 85: return 79 +2  # do # 
-        case 86: return 79 + 4 # re 
-        case 87: return 79 + 6 # re # 
-        case 88: return 79 + 8 # mi 
-        case 89: return 79 + 11 # fa 
-        case 90: return 79 + 13 # fa #
-        case 91: return 79 + 15 # sol
-        case 92: return 79 + 17 # sol #
-        case 93: return 79 + 19 # la
-        case 94: return 79 + 21 # la # 
-        case 95: return 79 + 23 # si 
+def midi_to_color(midi_note):
+    # Color mappings for notes within an octave
+    color_mapping = {
+        0: Color(255, 0, 0),      # C
+        1: Color(255, 0, 0),      # C#
+        2: Color(254, 153, 0),    # D
+        3: Color(254, 153, 0),    # D#
+        4: Color(255, 222, 89),   # E
+        5: Color(125, 128, 88),   # F
+        6: Color(125, 128, 88),   # F#
+        7: Color(94, 131, 232),   # G
+        8: Color(94, 131, 232),   # G#
+        9: Color(204, 108, 231),  # A
+        10: Color(204, 108, 231), # A#
+        11: Color(239, 45, 139)   # B
+    }
+    
+    # Get the position within the octave
+    note_in_octave = midi_note % 12
+    
+    return color_mapping[note_in_octave]
 
-        case _: 
-            return 1
 
-def calculate_led_color(midi_note):
+def pause_song(): 
+    global pause 
+    pause = True 
 
-    # Each note should have a different LED color
-    # based on the rainbow distribution (from red (C) to violet (B))
-    match midi_note:
+tempo = 500000  # Standard MIDI tempo 120 BPM
+def ticks_to_seconds(ticks, tempo, tpq):
+    return (tempo / 1_000_000) * (ticks / tpq)
 
-        case 60: return Color(255, 0, 0) # do
-        case 61: return  Color(255, 0, 0) # do #
-        case 62: return Color(254, 153, 0) # re 
-        case 63: return Color(254, 153, 0) # re # 
-        case 64: return Color(255, 222, 89) # mi  
-        case 65: return Color(125,128,88) # fa 
-        case 66: return Color(125,128,88) # fa #
-        case 67: return Color(94,131,232) # sol
-        case 68: return Color(94,131,232)  # sol #
-        case 69: return Color(204,108,231)  # la
-        case 70: return Color(204,108,231) # la # 
-        case 71: return Color(239, 45,139) # si 
-        # octava central
-        case 72: return Color(255, 0, 0) # do
-        case 73: return Color(255, 0, 0) # do #
-        case 74: return Color(254, 153, 0) # re 
-        case 75: return Color(254, 153, 0) # re # 
-        case 76: return Color(255, 222, 89) # mi 
-        case 77: return Color(125,128,88) # fa 
-        case 78: return Color(125,128,88) # fa #
-        case 79: return  Color(94,131,232) # sol
-        case 80: return Color(94,131,232)  # sol #
-        case 81: return Color(204,108,231)  # la
-        case 82: return Color(204,108,231) # la # 
-        case 83: return Color(239, 45,139) # si 
-        case _: 
-            return Color(255, 0,0)
+def stop_song(): 
+    print("Called stop_song")
 
-def play_song(): 
+    global stop 
+    stop = True
+
+def set_speed(speed): 
+    global song_speed
+    song_speed = float(speed)
+
+def back_5_seconds(): 
+    global back
+    back = True 
+
+
+def play_song(midi_path): 
+    global pause 
+    global tempo 
+    global stop
+    global song_speed
+    global back 
+
+    stop = False 
+    if pause: # Resume song if paused
+        pause = False 
+        return 
+    
+    pause = False 
+    print("Loading midi path", midi_path)
+    mid = MidiFile(midi_path, clip=True)
+    print('midi_file.ticks_per_beat', mid.ticks_per_beat)
+    tpq = mid.ticks_per_beat
+    current_elapsed_time = 0
+
     track = mid.tracks[1]
-    for msg in track:
+    msg_index = 0 
+    while msg_index < len(track):
+        msg = track[msg_index]  
+        msg_index += 1          
+        if msg.is_meta and msg.type == 'set_tempo':
+            tempo = msg.tempo  # Update tempo if there's a set_tempo message
+
+        if back: 
+            back = False 
+            target_time =5
+            accumulated_time = 0
+
+            for i in range(msg_index, -1, -1):
+                accumulated_time += ticks_to_seconds(track[i].time, tempo, tpq)
+                if accumulated_time >= target_time:
+                    print("Back to msg_index", i)
+                    colorWipe(strip, Color(0, 0, 0), 10)
+
+                    msg_index = i
+                    break
+
+        if stop: 
+            stop = False
+            colorWipe(strip, Color(0, 0, 0), 10)
+
+            print("Stopping song ", midi_path)
+            return 
+
+
+        while pause: 
+            time.sleep(0.1)
+             
         print(msg)
 
         if msg.time > 0 : 
-            time.sleep(((msg.time - TIME_GAP) / SONG_SPEED) / 1000)
+            current_elapsed_time += ticks_to_seconds(msg.time, tempo, tpq)
+            time.sleep(ticks_to_seconds(msg.time, tempo, tpq) / song_speed)
+            #time.sleep(((msg.time - TIME_GAP) / SONG_SPEED) / 1000)
         if msg.type == 'note_on' and msg.velocity > 0:
-            note = calculate_led_position(msg.note) #- FIRST_NOTE_LED
-            color = calculate_led_color(msg.note)
+            note = midi_to_led_position(msg.note) #- FIRST_NOTE_LED
+            color = midi_to_color(msg.note)
 
             strip.setPixelColor(note, color)
             strip.show()
         elif msg.type == 'note_off'  or (msg.type == 'note_on' and msg.velocity == 0):
-            note = calculate_led_position(msg.note)# - FIRST_NOTE_LED
+            note = midi_to_led_position(msg.note)# - FIRST_NOTE_LED
             strip.setPixelColor(note, Color(0, 0, 0))
             strip.show()
             time.sleep(TIME_GAP) # add a little gap on note off, we want it to blink in case the next note is the same.
-        else:
-            print("skipping", msg)
-
-def play_song_with_keys(): 
-    # This mode is supposed to play the song and wait for a key press to play the next note
-    # It is a cool concept, but it is not working as expected
-    # Because the microphone is not reliable to detect the key press
-    # This could be achieve only with a MIDI input device
-    track = mid.tracks[1]
-    note_on = False
-    for msg in track:
-        print(msg)
-        if msg.type == 'note_on':
-            note = msg.note - FIRST_NOTE_LED
-            strip.setPixelColor(note, Color(255, 0, 0))
-            strip.show()
-            note_on=True
-        elif msg.type == 'note_off' and note_on:
-            GPIO.wait_for_edge(microphone, GPIO.FALLING, timeout=3000) # detect any sound 
-
-            strip.setPixelColor(note, Color(0, 0, 0))
-            strip.show()
-            time.sleep(0.1)
-            note_on=False
         else:
             print("skipping", msg)
 
@@ -211,9 +225,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Create NeoPixel object with appropriate configuration.
-    strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
-    # Intialize the library (must be called once before other functions).
-    strip.begin()
 
     print('Press Ctrl-C to quit.')
     if not args.clear:

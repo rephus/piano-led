@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Browser</title>
+</head>
+<body>
+    <h1>Browse Files</h1>
+    {% if current_path %}
+    <a href="/">Go Up</a>
+    {% endif %}
+    <h2>Directories</h2>
+    <ul>
+        {% for directory in directories %}
+        <li><a href="{{ url_for('browse', subpath=(current_path + '/' if current_path else '') + directory) }}">{{ directory }}</a></li>
+        {% endfor %}
+    </ul>
+    <h2>Files</h2>
+    <ul>
+        {% for file in files %}
+        <li><a href="{{ url_for('run_method', filename=(current_path + '/' if current_path else '') + file) }}">{{ file }}</a></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
