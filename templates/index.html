@@ -20,5 +20,25 @@
         <li><a href="{{ url_for('run_method', filename=(current_path + '/' if current_path else '') + file) }}">{{ file }}</a></li>
         {% endfor %}
     </ul>
+
+    <div>
+        <a href="https://www.ninsheetmusic.org/browse/series" target="_blank">Download more songs</a>
+    </div>
+    <div>
+        <h2>Test</h2>
+        <button onclick="test('do')">Light all do's</button>
+        <button onclick="test('all')">Light all keys</button>
+        <button onclick="test('rainbow')">Rainbow</button>
+        <button onclick="test('clear')">Clear</button>
+
+    </div>
+
+    <script>
+        
+        function test(action) {
+            fetch(`/test/${action}`)
+        }
+
+    </script>
 </body>
 </html>

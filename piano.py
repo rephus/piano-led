@@ -29,26 +29,16 @@ FIRST_NOTE_LED = 20 # the first note that will be played on the LED
 song_speed = 1 # speed of the song to play 
 TIME_GAP = 0 # time between notes
 
-#mid = MidiFile('keyboardcat.mid', clip=True)
-#mid = MidiFile('songs/aeris.mid', clip=True)
-#import pdb; pdb.set_trace()
-#mid = MidiFile('songs/at_zanarkand.mid', clip=True)
-#mid = MidiFile('songs/invention1bach60ppm.mid', clip=True)
-#mid = MidiFile('songs/himno de la alegria.mid', clip=True)
-#mid = MidiFile('songs/greengreens.mid', clip=True)
-#mid = MidiFile('songs/darkwrld.mid', clip=True)
-#mid = MidiFile('songs/hyrulecastle.mid', clip=True)
-#mid = MidiFile('songs/brinstar.mid', clip=True)
-#mid = MidiFile('songs/supermario.mid', clip=True)
-
-
 # TODO track0 is always metadata ?
  
 strip = PixelStrip(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
 # Intialize the library (must be called once before other functions).
 strip.begin()
 
-
+def clear_leds(): 
+    for i in range(strip.numPixels()):
+        strip.setPixelColor(i, Color(0, 0, 0))
+    strip.show()
 #print(mid)
 # Define functions which animate LEDs in various ways.
 def colorWipe(strip, color, wait_ms=50):
@@ -78,9 +68,10 @@ def rainbow(strip, wait_seconds=1):
     strip.show()
     time.sleep(wait_seconds)
 
+base_positions = {48: 1, 60: 27, 72: 53, 84: 79, 96: 105, 108: 132 }
+
 def midi_to_led_position(midi_note):
     # Base positions for C notes in different octaves
-    base_positions = {48: 1, 60: 27, 72: 53, 84: 79, 96: 105, 108: 132 }
     # Offset positions within an octave
     offsets = [0, 2, 4, 6, 8, 11, 13, 15, 17, 19, 21, 23]
     
@@ -103,13 +94,13 @@ def midi_to_color(midi_note):
     color_mapping = {
         0: Color(255, 0, 0),      # C
         1: Color(255, 0, 0),      # C#
-        2: Color(254, 153, 0),    # D
-        3: Color(254, 153, 0),    # D#
-        4: Color(255, 222, 89),   # E
-        5: Color(125, 128, 88),   # F
-        6: Color(125, 128, 88),   # F#
-        7: Color(94, 131, 232),   # G
-        8: Color(94, 131, 232),   # G#
+        2: Color(254, 50, 0),    # D
+        3: Color(254, 50, 0),    # D#
+        4: Color(255, 153, 0),   # E
+        5: Color(0, 255, 0),   # F
+        6: Color(0, 255, 0),   # F#
+        7: Color(0, 0, 255),   # G
+        8: Color(0, 0, 255),   # G#
         9: Color(204, 108, 231),  # A
         10: Color(204, 108, 231), # A#
         11: Color(239, 45, 139)   # B
@@ -143,6 +134,41 @@ def back_5_seconds():
     global back
     back = True 
 
+def led_midi_notes(): 
+    clear_leds()
+    for i in range(48,109): # midi notes
+        position = midi_to_led_position(i)
+        color = midi_to_color(i)
+        strip.setPixelColor(position, color)
+    strip.show()
+def test(action): 
+    print("test", action)
+    match action:
+        case 'do':
+            clear_leds()
+            for i in base_positions:
+                strip.setPixelColor(base_positions[i], Color(255, 0, 0))
+            strip.show()
+        case 'all':
+            led_midi_notes()
+        case 'clear':
+            clear_leds()
+        case 'rainbow':
+            clear_leds()
+            rainbow(strip)
+
+        case _:
+            print("undefined player action", action)
+
+def play_tempo(tempo):
+    print("Playing tempo", tempo)
+    seconds_per_quarter_note = tempo / 1_000_000
+    for _ in range(3):
+        led_midi_notes()
+        time.sleep(seconds_per_quarter_note / 2)
+        clear_leds()
+        time.sleep(seconds_per_quarter_note / 2)
+
 
 def play_song(midi_path): 
     global pause 
@@ -163,13 +189,23 @@ def play_song(midi_path):
     tpq = mid.ticks_per_beat
     current_elapsed_time = 0
 
+    clear_leds()
+
     track = mid.tracks[1]
     msg_index = 0 
+    # Load tempo
     while msg_index < len(track):
         msg = track[msg_index]  
         msg_index += 1          
         if msg.is_meta and msg.type == 'set_tempo':
             tempo = msg.tempo  # Update tempo if there's a set_tempo message
+
+    play_tempo(tempo)
+    msg_index = 0 
+    while msg_index < len(track):
+
+        msg = track[msg_index]  
+        msg_index += 1          
 
         if back: 
             back = False 
@@ -180,18 +216,16 @@ def play_song(midi_path):
                 accumulated_time += ticks_to_seconds(track[i].time, tempo, tpq)
                 if accumulated_time >= target_time:
                     print("Back to msg_index", i)
-                    colorWipe(strip, Color(0, 0, 0), 10)
+                    clear_leds()
 
                     msg_index = i
                     break
 
         if stop: 
             stop = False
-            colorWipe(strip, Color(0, 0, 0), 10)
-
+            clear_leds()
             print("Stopping song ", midi_path)
             return 
-
 
         while pause: 
             time.sleep(0.1)
@@ -217,28 +251,4 @@ def play_song(midi_path):
             print("skipping", msg)
 
 
-# Main program logic follows:
-if __name__ == '__main__':
-    # Process arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--clear', action='store_true', help='clear the display on exit')
-    args = parser.parse_args()
 
-    # Create NeoPixel object with appropriate configuration.
-
-    print('Press Ctrl-C to quit.')
-    if not args.clear:
-        print('Use "-c" argument to clear LEDs on exit')
-
-    try:
-        print('Starting strip.')
-        #colorWipe(strip, Color(255, 0, 0), 10)  # Red wipe
-        #rainbow(strip)
-        colorWipe(strip, Color(0, 0, 0), 10)
-
-        play_song() 
-        #play_song_with_keys()
-
-    except KeyboardInterrupt:
-        if args.clear:
-            colorWipe(strip, Color(0, 0, 0), 10)

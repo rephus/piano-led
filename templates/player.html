@@ -25,25 +25,26 @@
         <!--
             https://cifkao.github.io/html-midi-player/
         -->
-       <h2> Preview </h2>
-    <midi-visualizer
-      type="piano-roll"
-      src="/serve/{{filename}}">
-    </midi-visualizer>
-    <midi-visualizer
-      type="staff"
-      src="/serve/{{filename}}">
-    </midi-visualizer>
-    <midi-player
-    src="/serve/{{filename}}"
-      sound-font visualizer="midi-visualizer">
-    </midi-player>
+    </div>
+    <div>
+        <h2> Preview </h2>
+        <midi-visualizer
+        type="piano-roll"
+        src="/serve/{{filename}}">
+        </midi-visualizer>
+        <midi-visualizer
+        type="staff"
+        src="/serve/{{filename}}">
+        </midi-visualizer>
+        <midi-player
+        src="/serve/{{filename}}"
+        sound-font visualizer="midi-visualizer">
+        </midi-player>
 
     </div>
 
     <script>
         
-
         function changeSpeed() {
             const speed = document.querySelector('#speed').value
             fetch(`/player/speed?speed=${speed}`)
@@ -52,6 +53,10 @@
         function action(action) {
             fetch(`/player/${action}`)
         }
+        function test(action) {
+            fetch(`/test/${action}`)
+        }
+
       
         function back() {
             console.log('back')

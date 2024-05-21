@@ -1,11 +1,14 @@
 from flask import Flask, send_from_directory, render_template, request, redirect, url_for
 import os
-from piano import colorWipe,  play_song, strip, pause_song, stop_song, set_speed, back_5_seconds
+from piano import colorWipe,  play_song, strip, pause_song, stop_song, set_speed, back_5_seconds, test
 from rpi_ws281x import PixelStrip, Color
 import time 
 
 app = Flask(__name__)
 
+path = os.path.dirname(os.path.realpath(__file__))
+print("Running webserver in path ", path)
+songs_folder = 'midi'
 filepath = ""
 def list_files(directory):
     """List directories and files in the given directory."""
@@ -31,18 +34,19 @@ def run_method(filename):
 @app.route('/serve/<path:filename>')
 def serve_file(filename):
 
-    return send_from_directory('midi', filename)
+    return send_from_directory(songs_folder, filename)
 
 @app.route('/')
 @app.route('/browse/<path:subpath>')
 def browse(subpath=''):
-    base_dir = '/home/pi/apps/piano-led/midi'  # Change this to your folder path
+    base_dir = f'{path}/{songs_folder}'  # Change this to your folder path
     abs_path = os.path.join(base_dir, subpath)
-    stop_song() 
-
+    
+    print("abs_path", abs_path)
     if not os.path.exists(abs_path):
         return redirect(url_for('browse'))
 
+    stop_song() 
     directories, files = list_files(abs_path)
     return render_template('index.html', directories=directories, files=files, current_path=subpath)
 
@@ -54,7 +58,7 @@ def player(action):
     #switch for action
     match action: 
         case 'play': 
-            play_song("midi/" + filepath) 
+            play_song(f"{songs_folder}/{filepath}") 
         case 'speed': 
             # get params from request
             speed = request.args.get('speed')
@@ -69,7 +73,7 @@ def player(action):
         case 'restart': 
             stop_song() 
             time.sleep(1)
-            play_song("midi/" + filepath)
+            play_song(f"{songs_folder}/{filepath}") 
         #case 'stop': 
         #    stop_song()
         case 'pause': 
@@ -80,5 +84,14 @@ def player(action):
         
     return ""
 
+@app.route('/test/<path:action>')
+def get_test(action):
+    test(action)
+
+    return ""
+
 if __name__ == '__main__':
+    test("all")
+    time.sleep(0.5)
+    test('clear')
     app.run(debug=True, host='0.0.0.0')
