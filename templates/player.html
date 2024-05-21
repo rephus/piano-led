@@ -20,7 +20,7 @@
         <button onclick="action('play')">Play</button>
         <button onclick="action('pause')">Pause</button>
         <button onclick="action('restart')">Restart</button>
-        <input id='mute' type="checkbox" onclick="mute()">🔊</button>
+        <!--<input id='mute' type="checkbox" onclick="mute()">🔊</button>-->
 
         <!--
             https://cifkao.github.io/html-midi-player/
@@ -28,18 +28,19 @@
     </div>
     <div>
         <h2> Preview </h2>
-        <midi-visualizer
-        type="piano-roll"
-        src="/serve/{{filename}}">
-        </midi-visualizer>
-        <midi-visualizer
-        type="staff"
-        src="/serve/{{filename}}">
-        </midi-visualizer>
         <midi-player
         src="/serve/{{filename}}"
         sound-font visualizer="midi-visualizer">
         </midi-player>
+
+        <midi-visualizer
+        type="piano-roll"
+        src="/serve/{{filename}}">
+        </midi-visualizer>
+        <!--<midi-visualizer
+        type="staff"
+        src="/serve/{{filename}}">
+        </midi-visualizer>-->
 
     </div>
 

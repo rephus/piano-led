@@ -56,29 +56,28 @@ def player(action):
     global filepath
     
     #switch for action
-    match action: 
-        case 'play': 
+    if action == 'play': 
             play_song(f"{songs_folder}/{filepath}") 
-        case 'speed': 
+    elif action == 'speed': 
             # get params from request
             speed = request.args.get('speed')
             set_speed(speed)
             print("speed ", speed)
-        case 'mute': 
+    elif action ==  'mute': 
             # get params from request
             mute = request.args.get('mute')
             print("mute ", mute)
-        case 'back':
+    elif action ==  'back':
             back_5_seconds()
-        case 'restart': 
+    elif action ==  'restart': 
             stop_song() 
             time.sleep(1)
             play_song(f"{songs_folder}/{filepath}") 
         #case 'stop': 
         #    stop_song()
-        case 'pause': 
+    elif action ==  'pause': 
             pause_song() 
-        case _:
+    else:
             print("undefined player action", action)
 
         

@@ -143,21 +143,21 @@ def led_midi_notes():
     strip.show()
 def test(action): 
     print("test", action)
-    match action:
-        case 'do':
+    if action =='do':
+
             clear_leds()
             for i in base_positions:
                 strip.setPixelColor(base_positions[i], Color(255, 0, 0))
             strip.show()
-        case 'all':
+    elif action =='all':
             led_midi_notes()
-        case 'clear':
+    elif action == 'clear':
             clear_leds()
-        case 'rainbow':
+    elif action == 'rainbow':
             clear_leds()
             rainbow(strip)
 
-        case _:
+    else:
             print("undefined player action", action)
 
 def play_tempo(tempo):
@@ -186,6 +186,9 @@ def play_song(midi_path):
     print("Loading midi path", midi_path)
     mid = MidiFile(midi_path, clip=True)
     print('midi_file.ticks_per_beat', mid.ticks_per_beat)
+
+    print("song_speed", song_speed)
+
     tpq = mid.ticks_per_beat
     current_elapsed_time = 0
 
@@ -230,7 +233,7 @@ def play_song(midi_path):
         while pause: 
             time.sleep(0.1)
              
-        print(msg)
+        #print(msg)
 
         if msg.time > 0 : 
             current_elapsed_time += ticks_to_seconds(msg.time, tempo, tpq)
